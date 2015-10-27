@@ -6,7 +6,6 @@ import sun.reflect.ConstantPool;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.List;
 
 public class ConstantPoolTypeIntrospector implements TypeIntrospector {
     private static final Method Class_getConstantPool;
@@ -36,7 +35,23 @@ public class ConstantPoolTypeIntrospector implements TypeIntrospector {
     }
 
     private String getTypeString(ConstantPool constantPool) {
-        String[] memberRef = constantPool.getMemberRefInfoAt(constantPool.getSize() - 2);
+        int size = constantPool.getSize();
+        String[] memberRef = null;
+
+        // find last element in constantPool with valid memberRef
+        // - previously always at size-2 index but changed with JDK 1.8.0_60
+        for (int i = size - 1; i > -1; i--) {
+            try {
+                memberRef = constantPool.getMemberRefInfoAt(i);
+                break;
+            } catch (IllegalArgumentException e) {
+                // eat error; null entry at ConstantPool index?
+            }
+        }
+        if (memberRef == null) {
+            throw new CucumberException("Couldn't find memberRef.");
+        }
+
         return memberRef[2];
     }
 
