@@ -1,5 +1,6 @@
 ## [1.2.5-SNAPSHOT](https://github.com/cucumber/cucumber-jvm/compare/v1.2.4...master) (In Git)
 
+* [Java8] Fix IllegalArgumentException on JDK 1.8.0_60 ([#912](https://github.com/cucumber/cucumber-jvm/issues/912), [#914](https://github.com/cucumber/cucumber-jvm/pull/914) Michael Wilkerson)
 * [Java8] Throw better exception when lambda stepdefs use generic list arguments (unsupported) (Aslak Hellesøy)
 
 ## [1.2.4](https://github.com/cucumber/cucumber-jvm/compare/v1.2.3...v1.2.4) (2015-07-23)

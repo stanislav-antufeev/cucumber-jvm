@@ -6,7 +6,6 @@ import sun.reflect.ConstantPool;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
-import java.util.List;
 
 public class ConstantPoolTypeIntrospector implements TypeIntrospector {
     private static final Method Class_getConstantPool;
@@ -48,6 +47,9 @@ public class ConstantPoolTypeIntrospector implements TypeIntrospector {
             } catch (IllegalArgumentException e) {
                 // eat error; null entry at ConstantPool index?
             }
+        }
+        if (memberRef == null) {
+            throw new CucumberException("Couldn't find memberRef.");
         }
 
         return memberRef[2];
