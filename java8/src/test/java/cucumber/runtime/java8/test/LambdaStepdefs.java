@@ -19,13 +19,17 @@ public class LambdaStepdefs implements En {
             assertNotSame(this, lastInstance);
             lastInstance = this;
         });
+
         Given("^this data table:$", (DataTable peopleTable) -> {
             List<Person> people = peopleTable.asList(Person.class);
             assertEquals("Hellesøy", people.get(0).last);
         });
+
         Integer alreadyHadThisManyCukes = 1;
-        Given("^I have 42 cukes in my belly$", () -> {
+
+        Given("^I have (\\d+) cukes in my belly$", (Long n) -> {
             assertEquals((Integer) 1, alreadyHadThisManyCukes);
+            assertEquals((Long) 42L, n);
         });
     }
 
