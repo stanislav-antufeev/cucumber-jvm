@@ -37,6 +37,7 @@ public class RuntimeOptions {
     private final List<String> pluginFormatterNames = new ArrayList<String>();
     private final List<String> pluginStepDefinitionReporterNames = new ArrayList<String>();
     private final List<String> pluginSummaryPrinterNames = new ArrayList<String>();
+    private final List<String> junitOptions = new ArrayList<String>();
     private final PluginFactory pluginFactory;
     private final List<Object> plugins = new ArrayList<Object>();
     private boolean dryRun;
@@ -98,6 +99,8 @@ public class RuntimeOptions {
         List<Object> parsedFilters = new ArrayList<Object>();
         List<String> parsedFeaturePaths = new ArrayList<String>();
         List<String> parsedGlue = new ArrayList<String>();
+        ParsedPluginData parsedPluginData = new ParsedPluginData();
+        List<String> parsedJunitOptions = new ArrayList<String>();
 
         while (!args.isEmpty()) {
             String arg = args.remove(0).trim();
@@ -116,11 +119,11 @@ public class RuntimeOptions {
                 parsedGlue.add(gluePath);
             } else if (arg.equals("--tags") || arg.equals("-t")) {
                 parsedFilters.add(args.remove(0));
-            } else if (arg.equals("--plugin") || arg.equals("-p")) {
-                addPluginName(args.remove(0));
+            } else if (arg.equals("--plugin") || arg.equals("--add-plugin") || arg.equals("-p")) {
+                parsedPluginData.addPluginName(args.remove(0), arg.equals("--add-plugin"));
             } else if (arg.equals("--format") || arg.equals("-f")) {
                 System.err.println("WARNING: Cucumber-JVM's --format option is deprecated. Please use --plugin instead.");
-                addPluginName(args.remove(0));
+                parsedPluginData.addPluginName(args.remove(0), true);
             } else if (arg.equals("--no-dry-run") || arg.equals("--dry-run") || arg.equals("-d")) {
                 dryRun = !arg.startsWith("--no-");
             } else if (arg.equals("--no-strict") || arg.equals("--strict") || arg.equals("-s")) {
@@ -134,6 +137,10 @@ public class RuntimeOptions {
                 String nextArg = args.remove(0);
                 Pattern patternFilter = Pattern.compile(nextArg);
                 parsedFilters.add(patternFilter);
+            } else if (arg.startsWith("--junit,")) {
+                for (String option : arg.substring("--junit,".length()).split(",")) {
+                    parsedJunitOptions.add(option);
+                }
             } else if (arg.startsWith("-")) {
                 printUsage();
                 throw new CucumberException("Unknown option: " + arg);
@@ -152,22 +159,19 @@ public class RuntimeOptions {
             featurePaths.clear();
             featurePaths.addAll(parsedFeaturePaths);
         }
+
         if (!parsedGlue.isEmpty()) {
             glue.clear();
             glue.addAll(parsedGlue);
         }
-    }
-
-    private void addPluginName(String name) {
-        if (PluginFactory.isFormatterName(name)) {
-            pluginFormatterNames.add(name);
-        } else if (PluginFactory.isStepDefinitionResporterName(name)) {
-            pluginStepDefinitionReporterNames.add(name);
-        } else if (PluginFactory.isSummaryPrinterName(name)) {
-            pluginSummaryPrinterNames.add(name);
-        } else {
-            throw new CucumberException("Unrecognized plugin: " + name);
+        if (!parsedJunitOptions.isEmpty()) {
+            junitOptions.clear();
+            junitOptions.addAll(parsedJunitOptions);
         }
+
+        parsedPluginData.updatePluginFormatterNames(pluginFormatterNames);
+        parsedPluginData.updatePluginStepDefinitionReporterNames(pluginStepDefinitionReporterNames);
+        parsedPluginData.updatePluginSummaryPrinterNames(pluginSummaryPrinterNames);
     }
 
     private boolean haveLineFilters(List<String> parsedFeaturePaths) {
@@ -350,5 +354,60 @@ public class RuntimeOptions {
 
     public SnippetType getSnippetType() {
         return snippetType;
+    }
+
+    public List<String> getJunitOptions() {
+        return junitOptions;
+    }
+
+    class ParsedPluginData {
+        ParsedOptionNames formatterNames = new ParsedOptionNames();
+        ParsedOptionNames stepDefinitionReporterNames = new ParsedOptionNames();
+        ParsedOptionNames summaryPrinterNames = new ParsedOptionNames();
+
+        public void addPluginName(String name, boolean isAddPlugin) {
+            if (PluginFactory.isFormatterName(name)) {
+                formatterNames.addName(name, isAddPlugin);
+            } else if (PluginFactory.isStepDefinitionResporterName(name)) {
+                stepDefinitionReporterNames.addName(name, isAddPlugin);
+            } else if (PluginFactory.isSummaryPrinterName(name)) {
+                summaryPrinterNames.addName(name, isAddPlugin);
+            } else {
+                throw new CucumberException("Unrecognized plugin: " + name);
+            }
+        }
+
+        public void updatePluginFormatterNames(List<String> pluginFormatterNames) {
+            formatterNames.updateNameList(pluginFormatterNames);
+        }
+
+        public void updatePluginStepDefinitionReporterNames(List<String> pluginStepDefinitionReporterNames) {
+            stepDefinitionReporterNames.updateNameList(pluginStepDefinitionReporterNames);
+        }
+
+        public void updatePluginSummaryPrinterNames(List<String> pluginSummaryPrinterNames) {
+            summaryPrinterNames.updateNameList(pluginSummaryPrinterNames);
+        }
+    }
+
+    class ParsedOptionNames {
+        private List<String> names = new ArrayList<String>();
+        private boolean clobber = false;
+
+        public void addName(String name, boolean isAddOption) {
+            names.add(name);
+            if (!isAddOption) {
+                clobber = true;
+            }
+        }
+
+        public void updateNameList(List<String> nameList) {
+            if (!names.isEmpty()) {
+                if (clobber) {
+                    nameList.clear();
+                }
+                nameList.addAll(names);
+            }
+        }
     }
 }

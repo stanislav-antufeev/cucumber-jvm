@@ -163,6 +163,26 @@ public class RuntimeOptionsTest {
     }
 
     @Test
+    public void assigns_single_junit_option() {
+        RuntimeOptions options = new RuntimeOptions(asList("--junit,option"));
+        assertEquals(asList("option"), options.getJunitOptions());
+    }
+
+    @Test
+    public void assigns_multiple_junit_options() {
+        RuntimeOptions options = new RuntimeOptions(asList("--junit,option1,option2=value"));
+        assertEquals(asList("option1", "option2=value"), options.getJunitOptions());
+    }
+
+    @Test
+    public void clobbers_junit_options_from_cli_if_junit_options_specified_in_cucumber_options_property() {
+        Properties properties = new Properties();
+        properties.setProperty("cucumber.options", "--junit,option_from_property");
+        RuntimeOptions runtimeOptions = new RuntimeOptions(new Env(properties), asList("--junit,option_to_be_clobbered"));
+        assertEquals(asList("option_from_property"), runtimeOptions.getJunitOptions());
+    }
+
+    @Test
     public void overrides_options_with_system_properties_without_clobbering_non_overridden_ones() {
         Properties properties = new Properties();
         properties.setProperty("cucumber.options", "--glue lookatme this_clobbers_feature_paths");
@@ -243,6 +263,51 @@ public class RuntimeOptionsTest {
         RuntimeOptions runtimeOptions = new RuntimeOptions(new Env(properties), asList("--tags", "@keep_this", "path/file1.feature:1"));
         assertEquals(asList("new", "newer"), runtimeOptions.getFeaturePaths());
         assertEquals(asList("@keep_this"), runtimeOptions.getFilters());
+    }
+
+    @Test
+    public void clobbers_formatter_plugins_from_cli_if_formatters_specified_in_cucumber_options_property() {
+        Properties properties = new Properties();
+        properties.setProperty("cucumber.options", "--plugin pretty");
+        RuntimeOptions options = new RuntimeOptions(new Env(properties), asList("--plugin", "html:some/dir", "--glue", "somewhere"));
+        assertPluginExists(options.getPlugins(), "cucumber.runtime.formatter.CucumberPrettyFormatter");
+        assertPluginNotExists(options.getPlugins(), "cucumber.runtime.formatter.HTMLFormatter");
+    }
+
+    @Test
+    public void adds_to_formatter_plugins_with_add_plugin_option() {
+        Properties properties = new Properties();
+        properties.setProperty("cucumber.options", "--add-plugin pretty");
+        RuntimeOptions options = new RuntimeOptions(new Env(properties), asList("--plugin", "html:some/dir", "--glue", "somewhere"));
+        assertPluginExists(options.getPlugins(), "cucumber.runtime.formatter.HTMLFormatter");
+        assertPluginExists(options.getPlugins(), "cucumber.runtime.formatter.CucumberPrettyFormatter");
+    }
+
+    @Test
+    public void clobbers_summary_plugins_from_cli_if_summary_printer_specified_in_cucumber_options_property() {
+        Properties properties = new Properties();
+        properties.setProperty("cucumber.options", "--plugin default_summary");
+        RuntimeOptions options = new RuntimeOptions(new Env(properties), asList("--plugin", "null_summary", "--glue", "somewhere"));
+        assertPluginExists(options.getPlugins(), "cucumber.runtime.DefaultSummaryPrinter");
+        assertPluginNotExists(options.getPlugins(), "cucumber.runtime.NullSummaryPrinter");
+    }
+
+    @Test
+    public void adds_to_summary_plugins_with_add_plugin_option() {
+        Properties properties = new Properties();
+        properties.setProperty("cucumber.options", "--add-plugin default_summary");
+        RuntimeOptions options = new RuntimeOptions(new Env(properties), asList("--plugin", "null_summary", "--glue", "somewhere"));
+        assertPluginExists(options.getPlugins(), "cucumber.runtime.NullSummaryPrinter");
+        assertPluginExists(options.getPlugins(), "cucumber.runtime.DefaultSummaryPrinter");
+    }
+
+    @Test
+    public void does_not_clobber_plugins_of_different_type_when_specifying_plugins_in_cucumber_options_property() {
+        Properties properties = new Properties();
+        properties.setProperty("cucumber.options", "--plugin default_summary");
+        RuntimeOptions options = new RuntimeOptions(new Env(properties), asList("--plugin", "pretty", "--glue", "somewhere"));
+        assertPluginExists(options.getPlugins(), "cucumber.runtime.formatter.CucumberPrettyFormatter");
+        assertPluginExists(options.getPlugins(), "cucumber.runtime.DefaultSummaryPrinter");
     }
 
     @Test
